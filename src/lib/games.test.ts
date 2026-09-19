@@ -3,8 +3,10 @@ import { createTestDatabase } from '../../db/test-helpers';
 import { categories, publishers, games } from '../../db/schema';
 import type { Database } from './db';
 import {
+    getAllCategories,
     getAllGames,
     getAllGameIds,
+    getAllPublishers,
     getGameById,
 } from './games';
 
@@ -62,5 +64,50 @@ describe('games data-access helpers', () => {
     it('returns null for a non-existent game', async () => {
         await seedGames(db, 2);
         expect(await getGameById(db, 99999)).toBeNull();
+    });
+
+    it('filters games by category and publisher when requested', async () => {
+        const strategy = await db.insert(categories).values({ name: 'Strategy', description: 'cat' }).returning({ id: categories.id });
+        const puzzle = await db.insert(categories).values({ name: 'Puzzle', description: 'cat' }).returning({ id: categories.id });
+        const pubOne = await db.insert(publishers).values({ name: 'Pub One', description: 'pub' }).returning({ id: publishers.id });
+        const pubTwo = await db.insert(publishers).values({ name: 'Pub Two', description: 'pub' }).returning({ id: publishers.id });
+
+        await db.insert(games).values([
+            { title: 'Alpha', description: 'A', starRating: 4.1, categoryId: strategy[0].id, publisherId: pubOne[0].id },
+            { title: 'Bravo', description: 'B', starRating: 4.2, categoryId: strategy[0].id, publisherId: pubTwo[0].id },
+            { title: 'Charlie', description: 'C', starRating: 4.3, categoryId: puzzle[0].id, publisherId: pubOne[0].id },
+        ]);
+
+        const byCategory = await getAllGames(db, { category: 'Strategy' });
+        expect(byCategory.map((game) => game.title)).toEqual(['Alpha', 'Bravo']);
+
+        const byPublisher = await getAllGames(db, { publisher: 'Pub One' });
+        expect(byPublisher.map((game) => game.title)).toEqual(['Alpha', 'Charlie']);
+
+        const combined = await getAllGames(db, {
+            category: ['Strategy', 'Puzzle'],
+            publisher: ['Pub One'],
+        });
+        expect(combined.map((game) => game.title)).toEqual(['Alpha', 'Charlie']);
+    });
+
+    it('returns the configured category and publisher collections in name order', async () => {
+        await db.insert(categories).values([
+            { name: 'Strategy', description: 'cat' },
+            { name: 'Puzzle', description: 'cat' },
+        ]);
+        await db.insert(publishers).values([
+            { name: 'Pub Two', description: 'pub' },
+            { name: 'Pub One', description: 'pub' },
+        ]);
+
+        await expect(getAllCategories(db)).resolves.toEqual([
+            { id: expect.any(Number), name: 'Puzzle' },
+            { id: expect.any(Number), name: 'Strategy' },
+        ]);
+        await expect(getAllPublishers(db)).resolves.toEqual([
+            { id: expect.any(Number), name: 'Pub One' },
+            { id: expect.any(Number), name: 'Pub Two' },
+        ]);
     });
 });

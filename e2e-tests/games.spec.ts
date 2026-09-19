@@ -86,6 +86,27 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should filter the game list by category and publisher', async ({ page }) => {
+    await test.step('Open the catalog with filters selected', async () => {
+      await page.goto('/?category=Strategy&publisher=CodeForge%20Studios');
+    });
+
+    await test.step('Verify the selected filters reduce the catalog to matching games', async () => {
+      await expect(page.getByTestId('game-filters')).toBeVisible();
+      await expect(page.getByRole('checkbox', { name: 'Strategy' })).toBeChecked();
+      await expect(page.getByTestId('publisher-filter')).toHaveValue('CodeForge Studios');
+      const visibleCards = page.locator('[data-testid="game-card"]:visible');
+      await expect(visibleCards).toHaveCount(1);
+      await expect(visibleCards.first().getByTestId('game-title')).toContainText('DevOps Dominion');
+    });
+
+    await test.step('Verify the clear filters link resets the catalog', async () => {
+      await page.getByTestId('clear-filters-link').click();
+      await expect(page).toHaveURL('/');
+      expect(await page.locator('[data-testid="game-card"]:visible').count()).toBeGreaterThan(1);
+    });
+  });
+
   test('should display a button to back the game', async ({ page }) => {
     await test.step('Navigate to game details page', async () => {
       await page.goto('/game/1');
