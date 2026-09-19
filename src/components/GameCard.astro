@@ -23,6 +23,12 @@ const { game } = Astro.props;
         <div class="relative z-10">
             <h3 class="text-xl font-semibold text-slate-100 mb-2 group-hover:text-blue-400 transition-colors" data-testid="game-title">{game.title}</h3>
 
+            {game.starRating === null ? (
+                <p class="text-slate-400 text-sm mb-3" data-testid="game-rating">No rating yet</p>
+            ) : (
+                <StarRating rating={game.starRating} />
+            )}
+
             {(game.category?.name || game.publisher?.name) && (
                 <div class="flex gap-2 mb-3">
                     {game.category?.name && (
@@ -39,12 +45,6 @@ const { game } = Astro.props;
             )}
 
             <p class="text-slate-400 mb-4 text-sm line-clamp-2" data-testid="game-description">{game.description}</p>
-
-            {game.starRating === null ? (
-                <p class="text-slate-400 text-sm mb-4" data-testid="game-rating">No rating yet</p>
-            ) : (
-                <StarRating rating={game.starRating} />
-            )}
 
             <div class="mt-4 text-sm text-blue-400 font-medium flex items-center">
                 <span>View details</span>
